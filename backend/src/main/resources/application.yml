@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: rag-learning-hub
+  datasource:
+    url: jdbc:h2:file:./data/rag-learning-hub;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:mysql://localhost:3306/rag_learning_hub?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: rag
+    password: rag-local-password
+
