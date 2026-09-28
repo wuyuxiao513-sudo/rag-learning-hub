@@ -8,14 +8,14 @@
 - 每个里程碑都有可验证的功能，适合长期维护，而不是一次性 Demo。
 - 记录架构决策、实验数据和踩坑过程，形成可复用的学习资料。
 
-## 当前版本：v0.1 Foundation
+## 当前版本：v0.1.1 Document Lifecycle
 
-- 创建和查看文档
+- 创建、查看和删除文档
 - 标题、正文关键词检索
-- Vue 3 单页界面
+- Vue 3 单页界面、结果数量与操作状态反馈
 - H2 本地数据库与 Flyway 迁移
 - Actuator 健康检查
-- 后端接口测试与 GitHub Actions
+- 前后端自动化测试与 GitHub Actions
 - MySQL、Redis、Qdrant 的 Docker Compose 基础设施
 
 ## 快速开始
@@ -72,11 +72,13 @@ Content-Type: application/json
 ```http
 GET /api/documents?q=检索
 GET /api/documents/{id}
+DELETE /api/documents/{id}
 ```
 
 ## 路线图
 
 - [x] v0.1：文档管理、关键词检索与基础界面
+- [x] v0.1.1：文档删除、状态反馈与前端组件测试
 - [ ] v0.2：Markdown/PDF 上传、解析和分块
 - [ ] v0.3：Embedding 与 Qdrant 向量检索
 - [ ] v0.4：Spring AI 问答、引用溯源

@@ -24,3 +24,8 @@ export async function createDocument(title: string, content: string): Promise<Kn
   return response.json()
 }
 
+export async function deleteDocument(id: number): Promise<void> {
+  const response = await fetch(`/api/documents/${id}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('删除失败，文档可能已不存在。')
+}
+

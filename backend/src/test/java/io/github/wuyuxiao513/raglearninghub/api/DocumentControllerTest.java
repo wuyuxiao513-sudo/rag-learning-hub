@@ -9,6 +9,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -56,5 +57,29 @@ class DocumentControllerTest {
                                 {"title": "", "content": ""}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deletesExistingDocument() throws Exception {
+        String response = mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "待删除资料",
+                                  "content": "这份资料不再需要。"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long id = Long.parseLong(response.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+        mockMvc.perform(delete("/api/documents/{id}", id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/documents/{id}", id))
+                .andExpect(status().isNotFound());
     }
 }

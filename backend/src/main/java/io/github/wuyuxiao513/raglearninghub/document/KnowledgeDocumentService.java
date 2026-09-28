@@ -35,5 +35,11 @@ public class KnowledgeDocumentService {
         return repository.findById(id)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
     }
+
+    @Transactional
+    public void delete(Long id) {
+        KnowledgeDocument document = get(id);
+        repository.delete(document);
+    }
 }
 

@@ -63,11 +63,15 @@ button:hover { background: #28744a; }
 button:disabled { cursor: wait; opacity: .6; }
 
 .search { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.result-summary { margin: 14px 0 0; color: #28744a; font-size: .84rem; font-weight: 800; }
 .message, .empty { color: #69756e; }
 .document { margin-top: 16px; padding: 20px; border-left: 4px solid #69b886; border-radius: 4px 15px 15px 4px; background: #f6f8f4; }
+.document-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .document small { color: #76837b; }
 .document h3 { margin-top: 4px; }
 .document p { margin-bottom: 0; color: #4f5c54; line-height: 1.65; white-space: pre-wrap; }
+.delete-button { padding: 7px 11px; color: #9f2d2d; background: transparent; border: 1px solid #e5c4c4; font-size: .78rem; }
+.delete-button:hover { color: white; background: #b63a3a; }
 
 @media (max-width: 760px) {
   main { grid-template-columns: 1fr; padding-top: 40px; }

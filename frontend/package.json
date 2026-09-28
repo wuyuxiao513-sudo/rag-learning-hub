@@ -1,11 +1,12 @@
 {
   "name": "rag-learning-hub-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run --environment happy-dom",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -13,8 +14,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.9",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^20.14.5",
     "typescript": "5.9.3",
     "vite": "8.3.0",
+    "vitest": "^5.0.2",
     "vue-tsc": "3.3.11"
   }
 }
