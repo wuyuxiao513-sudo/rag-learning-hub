@@ -108,4 +108,76 @@ describe('App', () => {
     expect(wrapper.text()).toContain('文档已保存。')
     expect(wrapper.text()).toContain('新资料')
   })
+
+  it('edits a document and updates the visible card', async () => {
+    const originalDocument = {
+      id: 7,
+      title: '旧标题',
+      content: '旧正文',
+      createdAt: '2026-09-28T06:00:00Z',
+    }
+    const updatedDocument = {
+      ...originalDocument,
+      title: '新标题',
+      content: '新正文',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [originalDocument] })
+      .mockResolvedValueOnce({ ok: true, json: async () => updatedDocument })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('button[aria-label="编辑旧标题"]').trigger('click')
+    await wrapper.get('.document-edit input').setValue('新标题')
+    await wrapper.get('.document-edit textarea').setValue('新正文')
+    await wrapper.get('form.document-edit').trigger('submit')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/documents/7', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '新标题', content: '新正文' }),
+    })
+    expect(wrapper.text()).toContain('新标题')
+    expect(wrapper.text()).toContain('新正文')
+    expect(wrapper.text()).toContain('文档已更新。')
+  })
+
+  it('clears an active search and reloads all documents', async () => {
+    const firstDocument = {
+      id: 7,
+      title: '检索笔记',
+      content: '第一篇正文。',
+      createdAt: '2026-09-28T06:00:00Z',
+    }
+    const secondDocument = {
+      id: 8,
+      title: '完整资料',
+      content: '第二篇正文。',
+      createdAt: '2026-09-28T06:10:00Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [firstDocument, secondDocument] })
+      .mockResolvedValueOnce({ ok: true, json: async () => [firstDocument] })
+      .mockResolvedValueOnce({ ok: true, json: async () => [firstDocument, secondDocument] })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const searchInput = wrapper.get('input[placeholder="输入标题或正文关键词"]')
+    await searchInput.setValue('检索')
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('.result-summary').text()).toBe('找到 1 条结果')
+    await wrapper.get('.clear-search').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?')
+    expect((searchInput.element as HTMLInputElement).value).toBe('')
+    expect(wrapper.get('.result-summary').text()).toBe('知识库共 2 篇文档')
+  })
 })

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +48,14 @@ public class DocumentController {
         return DocumentResponse.from(service.get(id));
     }
 
+    @PutMapping("/{id}")
+    public DocumentResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateDocumentRequest request
+    ) {
+        return DocumentResponse.from(service.update(id, request.title(), request.content()));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
@@ -54,6 +63,12 @@ public class DocumentController {
     }
 
     public record CreateDocumentRequest(
+            @NotBlank @Size(max = 200) String title,
+            @NotBlank @Size(max = 100_000) String content
+    ) {
+    }
+
+    public record UpdateDocumentRequest(
             @NotBlank @Size(max = 200) String title,
             @NotBlank @Size(max = 100_000) String content
     ) {

@@ -29,3 +29,17 @@ export async function deleteDocument(id: number): Promise<void> {
   if (!response.ok) throw new Error('删除失败，文档可能已不存在。')
 }
 
+export async function updateDocument(
+  id: number,
+  title: string,
+  content: string,
+): Promise<KnowledgeDocument> {
+  const response = await fetch(`/api/documents/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content }),
+  })
+  if (!response.ok) throw new Error('更新失败，请检查标题和正文。')
+  return response.json()
+}
+

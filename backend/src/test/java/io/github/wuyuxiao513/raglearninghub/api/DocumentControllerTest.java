@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -81,5 +82,40 @@ class DocumentControllerTest {
 
         mockMvc.perform(get("/api/documents/{id}", id))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updatesExistingDocument() throws Exception {
+        String response = mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "旧标题",
+                                  "content": "旧正文"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long id = Long.parseLong(response.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+        mockMvc.perform(put("/api/documents/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "  新标题  ",
+                                  "content": "  新正文  "
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.title").value("新标题"))
+                .andExpect(jsonPath("$.content").value("新正文"));
+
+        mockMvc.perform(get("/api/documents/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("新标题"));
     }
 }

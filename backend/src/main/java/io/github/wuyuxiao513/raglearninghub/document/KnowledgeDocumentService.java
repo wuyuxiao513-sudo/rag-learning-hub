@@ -37,6 +37,13 @@ public class KnowledgeDocumentService {
     }
 
     @Transactional
+    public KnowledgeDocument update(Long id, String title, String content) {
+        KnowledgeDocument document = get(id);
+        document.update(title.strip(), content.strip());
+        return document;
+    }
+
+    @Transactional
     public void delete(Long id) {
         KnowledgeDocument document = get(id);
         repository.delete(document);
