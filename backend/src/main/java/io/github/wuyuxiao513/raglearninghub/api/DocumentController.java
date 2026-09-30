@@ -35,12 +35,16 @@ public class DocumentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DocumentResponse create(@Valid @RequestBody CreateDocumentRequest request) {
-        return DocumentResponse.from(service.create(request.title(), request.content()));
+        return DocumentResponse.from(service.create(request.title(), request.content(), request.tags()));
     }
 
     @GetMapping
-    public List<DocumentResponse> search(@RequestParam(required = false) String q) {
-        return service.search(q).stream().map(DocumentResponse::from).toList();
+    public List<DocumentResponse> search(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tag,
+            @RequestParam(defaultValue = "newest") String sort
+    ) {
+        return service.search(q, tag, sort).stream().map(DocumentResponse::from).toList();
     }
 
     @GetMapping("/{id}")
@@ -53,7 +57,7 @@ public class DocumentController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateDocumentRequest request
     ) {
-        return DocumentResponse.from(service.update(id, request.title(), request.content()));
+        return DocumentResponse.from(service.update(id, request.title(), request.content(), request.tags()));
     }
 
     @DeleteMapping("/{id}")
@@ -64,23 +68,26 @@ public class DocumentController {
 
     public record CreateDocumentRequest(
             @NotBlank @Size(max = 200) String title,
-            @NotBlank @Size(max = 100_000) String content
+            @NotBlank @Size(max = 100_000) String content,
+            @Size(max = 10) List<@NotBlank @Size(max = 30) String> tags
     ) {
     }
 
     public record UpdateDocumentRequest(
             @NotBlank @Size(max = 200) String title,
-            @NotBlank @Size(max = 100_000) String content
+            @NotBlank @Size(max = 100_000) String content,
+            @Size(max = 10) List<@NotBlank @Size(max = 30) String> tags
     ) {
     }
 
-    public record DocumentResponse(Long id, String title, String content, Instant createdAt) {
+    public record DocumentResponse(Long id, String title, String content, Instant createdAt, List<String> tags) {
         static DocumentResponse from(KnowledgeDocument document) {
             return new DocumentResponse(
                     document.getId(),
                     document.getTitle(),
                     document.getContent(),
-                    document.getCreatedAt()
+                    document.getCreatedAt(),
+                    document.getTags().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList()
             );
         }
     }

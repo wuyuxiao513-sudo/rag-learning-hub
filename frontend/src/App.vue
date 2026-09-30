@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   createDocument,
   deleteDocument,
@@ -10,9 +10,15 @@ import {
 
 const query = ref('')
 const activeQuery = ref('')
+const selectedTag = ref('')
+const activeTag = ref('')
+const sortOrder = ref('newest')
+const activeSort = ref('newest')
 const title = ref('')
 const content = ref('')
+const tagsInput = ref('')
 const documents = ref<KnowledgeDocument[]>([])
+const availableTags = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
 const deletingId = ref<number | null>(null)
@@ -20,14 +26,38 @@ const editingId = ref<number | null>(null)
 const updatingId = ref<number | null>(null)
 const editTitle = ref('')
 const editContent = ref('')
+const editTagsInput = ref('')
+const hasActiveSearch = computed(() => (
+  Boolean(activeQuery.value || activeTag.value) || activeSort.value !== 'newest'
+))
+
+function parseTags(value: string): string[] {
+  const tags = value
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+  return [...new Map(tags.map((tag) => [tag.toLocaleLowerCase(), tag])).values()]
+}
+
+function rememberTags(results: KnowledgeDocument[]) {
+  const tags = results.flatMap((document) => document.tags ?? [])
+  availableTags.value = [...new Set([...availableTags.value, ...tags])]
+    .sort((left, right) => left.localeCompare(right))
+}
 
 async function search(): Promise<boolean> {
   const requestedQuery = query.value.trim()
+  const requestedTag = selectedTag.value
+  const requestedSort = sortOrder.value
   loading.value = true
   message.value = ''
   try {
-    documents.value = await searchDocuments(requestedQuery)
+    const results = await searchDocuments(requestedQuery, requestedTag, requestedSort)
+    documents.value = results
+    rememberTags(results)
     activeQuery.value = requestedQuery
+    activeTag.value = requestedTag
+    activeSort.value = requestedSort
     return true
   } catch (error) {
     message.value = error instanceof Error ? error.message : '发生未知错误'
@@ -46,9 +76,10 @@ async function save() {
   loading.value = true
   message.value = ''
   try {
-    await createDocument(title.value, content.value)
+    await createDocument(title.value, content.value, parseTags(tagsInput.value))
     title.value = ''
     content.value = ''
+    tagsInput.value = ''
     const refreshed = await search()
     if (refreshed) message.value = '文档已保存。'
   } catch (error) {
@@ -76,6 +107,8 @@ async function remove(document: KnowledgeDocument) {
 
 async function clearSearch() {
   query.value = ''
+  selectedTag.value = ''
+  sortOrder.value = 'newest'
   await search()
 }
 
@@ -83,6 +116,7 @@ function startEdit(document: KnowledgeDocument) {
   editingId.value = document.id
   editTitle.value = document.title
   editContent.value = document.content
+  editTagsInput.value = (document.tags ?? []).join(', ')
   message.value = ''
 }
 
@@ -97,10 +131,17 @@ async function saveEdit(document: KnowledgeDocument) {
   updatingId.value = document.id
   message.value = ''
   try {
-    const updated = await updateDocument(document.id, nextTitle, nextContent)
+    const updated = await updateDocument(
+      document.id,
+      nextTitle,
+      nextContent,
+      parseTags(editTagsInput.value),
+    )
     documents.value = documents.value.map((item) => item.id === updated.id ? updated : item)
+    rememberTags([updated])
     editingId.value = null
-    message.value = '文档已更新。'
+    const refreshed = await search()
+    if (refreshed) message.value = '文档已更新。'
   } catch (error) {
     message.value = error instanceof Error ? error.message : '发生未知错误'
   } finally {
@@ -132,6 +173,10 @@ onMounted(search)
         正文
         <textarea v-model="content" rows="7" placeholder="粘贴一段值得检索的技术笔记……" />
       </label>
+      <label>
+        标签
+        <input v-model="tagsInput" maxlength="320" placeholder="例如：RAG, Spring AI" />
+      </label>
       <button :disabled="loading" @click="save">保存文档</button>
     </section>
 
@@ -141,23 +186,42 @@ onMounted(search)
         <h2>检索知识库</h2>
       </div>
       <form class="search" @submit.prevent="search">
-        <input v-model="query" placeholder="输入标题或正文关键词" />
-        <button :disabled="loading">{{ loading ? '检索中' : '搜索' }}</button>
-        <button
-          v-if="activeQuery"
-          class="clear-search secondary-button"
-          type="button"
-          :disabled="loading"
-          @click="clearSearch"
-        >
-          清空搜索
-        </button>
+        <div class="search-primary">
+          <input v-model="query" placeholder="输入标题或正文关键词" />
+          <button :disabled="loading">{{ loading ? '检索中' : '搜索' }}</button>
+          <button
+            v-if="hasActiveSearch"
+            class="clear-search secondary-button"
+            type="button"
+            :disabled="loading"
+            @click="clearSearch"
+          >
+            清空搜索
+          </button>
+        </div>
+        <div class="search-filters">
+          <label>
+            标签
+            <select v-model="selectedTag" aria-label="按标签筛选">
+              <option value="">全部标签</option>
+              <option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
+            </select>
+          </label>
+          <label>
+            排序
+            <select v-model="sortOrder" aria-label="排序方式">
+              <option value="newest">最新创建</option>
+              <option value="oldest">最早创建</option>
+              <option value="title">标题排序</option>
+            </select>
+          </label>
+        </div>
       </form>
 
       <p class="result-summary" aria-live="polite">
         {{ loading
           ? '正在加载文档…'
-          : activeQuery
+          : activeQuery || activeTag
             ? `找到 ${documents.length} 条结果`
             : `知识库共 ${documents.length} 篇文档`
         }}
@@ -179,6 +243,10 @@ onMounted(search)
           <label>
             正文
             <textarea v-model="editContent" rows="5" />
+          </label>
+          <label>
+            标签
+            <input v-model="editTagsInput" maxlength="320" placeholder="例如：RAG, Spring AI" />
           </label>
           <div class="document-actions">
             <button
@@ -202,6 +270,17 @@ onMounted(search)
             <div>
               <small>#{{ document.id }} · {{ new Date(document.createdAt).toLocaleString() }}</small>
               <h3>{{ document.title }}</h3>
+              <div v-if="document.tags?.length" class="tag-list">
+                <button
+                  v-for="tag in document.tags"
+                  :key="tag"
+                  class="tag-pill"
+                  type="button"
+                  @click="selectedTag = tag; search()"
+                >
+                  {{ tag }}
+                </button>
+              </div>
             </div>
             <div class="document-actions">
               <button

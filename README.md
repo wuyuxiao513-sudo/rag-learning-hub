@@ -8,10 +8,12 @@
 - 每个里程碑都有可验证的功能，适合长期维护，而不是一次性 Demo。
 - 记录架构决策、实验数据和踩坑过程，形成可复用的学习资料。
 
-## 当前版本：v0.1.2 Document Editing
+## 当前版本：v0.1.3 Tags & Filters
 
 - 创建、查看、编辑和删除文档
-- 标题、正文关键词检索与一键清空搜索
+- 每篇文档最多添加 10 个自由标签
+- 关键词与标签组合筛选，支持最新、最早和标题排序
+- 点击标签直接筛选，并可一键清空搜索条件
 - Vue 3 单页界面、结果数量与操作状态反馈
 - H2 本地数据库与 Flyway 迁移
 - Actuator 健康检查
@@ -65,7 +67,8 @@ Content-Type: application/json
 
 {
   "title": "RAG 入门",
-  "content": "检索增强生成先检索可信资料，再把上下文交给模型。"
+  "content": "检索增强生成先检索可信资料，再把上下文交给模型。",
+  "tags": ["RAG", "检索"]
 }
 ```
 
@@ -75,21 +78,25 @@ Content-Type: application/json
 
 {
   "title": "更新后的标题",
-  "content": "更新后的正文"
+  "content": "更新后的正文",
+  "tags": ["Spring AI", "向量检索"]
 }
 ```
 
 ```http
-GET /api/documents?q=检索
+GET /api/documents?q=检索&tag=RAG&sort=title
 GET /api/documents/{id}
 DELETE /api/documents/{id}
 ```
+
+`sort` 支持 `newest`、`oldest` 和 `title`，默认使用 `newest`。
 
 ## 路线图
 
 - [x] v0.1：文档管理、关键词检索与基础界面
 - [x] v0.1.1：文档删除、状态反馈与前端组件测试
 - [x] v0.1.2：文档编辑、清空搜索与交互反馈
+- [x] v0.1.3：多标签、组合筛选与排序
 - [ ] v0.2：Markdown/PDF 上传、解析和分块
 - [ ] v0.3：Embedding 与 Qdrant 向量检索
 - [ ] v0.4：Spring AI 问答、引用溯源

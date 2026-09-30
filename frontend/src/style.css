@@ -16,7 +16,7 @@ body {
     #eef2e9;
 }
 
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 
 main {
   width: min(1120px, calc(100% - 32px));
@@ -47,7 +47,7 @@ h1 { margin: 12px 0 8px; font-size: clamp(2.4rem, 8vw, 5.7rem); letter-spacing: 
 h2, h3 { margin: 0; }
 
 label { display: grid; gap: 8px; margin-bottom: 18px; color: #536159; font-size: .86rem; font-weight: 700; }
-input, textarea {
+input, textarea, select {
   width: 100%;
   border: 1px solid #ccd7cf;
   border-radius: 13px;
@@ -57,12 +57,15 @@ input, textarea {
   outline: none;
   resize: vertical;
 }
-input:focus, textarea:focus { border-color: #28744a; box-shadow: 0 0 0 3px rgba(40, 116, 74, .12); }
+input:focus, textarea:focus, select:focus { border-color: #28744a; box-shadow: 0 0 0 3px rgba(40, 116, 74, .12); }
 button { border: 0; border-radius: 13px; padding: 13px 20px; color: white; background: #17231d; cursor: pointer; font-weight: 800; }
 button:hover { background: #28744a; }
 button:disabled { cursor: wait; opacity: .6; }
 
-.search { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+.search { display: grid; gap: 12px; }
+.search-primary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+.search-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.search-filters label { margin: 0; }
 .result-summary { margin: 14px 0 0; color: #28744a; font-size: .84rem; font-weight: 800; }
 .message, .empty { color: #69756e; }
 .document { margin-top: 16px; padding: 20px; border-left: 4px solid #69b886; border-radius: 4px 15px 15px 4px; background: #f6f8f4; }
@@ -70,6 +73,9 @@ button:disabled { cursor: wait; opacity: .6; }
 .document-actions { display: flex; align-items: center; gap: 8px; }
 .document small { color: #76837b; }
 .document h3 { margin-top: 4px; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag-pill { padding: 5px 9px; color: #28744a; background: #e4f2e8; font-size: .74rem; }
+.tag-pill:hover { color: white; background: #28744a; }
 .document p { margin-bottom: 0; color: #4f5c54; line-height: 1.65; white-space: pre-wrap; }
 .document-edit label:last-of-type { margin-bottom: 12px; }
 .secondary-button { color: #34483c; background: transparent; border: 1px solid #c5d2c9; }
@@ -82,5 +88,7 @@ button:disabled { cursor: wait; opacity: .6; }
   main { grid-template-columns: 1fr; padding-top: 40px; }
   .hero { grid-column: auto; }
   .panel { padding: 22px; }
+  .search-primary { grid-template-columns: minmax(0, 1fr) auto; }
+  .clear-search { grid-column: 1 / -1; }
 }
 

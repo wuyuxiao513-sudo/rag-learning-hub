@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:rag-learning-hub-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false

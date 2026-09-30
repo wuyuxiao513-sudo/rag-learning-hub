@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -117,5 +119,132 @@ class DocumentControllerTest {
         mockMvc.perform(get("/api/documents/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("新标题"));
+    }
+
+    @Test
+    void createsDocumentWithNormalizedTags() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "带标签资料",
+                                  "content": "标签应该被保存并去重。",
+                                  "tags": [" RAG ", "rag", "Spring AI"]
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tags", containsInAnyOrder("RAG", "Spring AI")));
+    }
+
+    @Test
+    void updatesDocumentTags() throws Exception {
+        String response = mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "待更新标签",
+                                  "content": "原始正文",
+                                  "tags": ["旧标签"]
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        long id = Long.parseLong(response.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+        mockMvc.perform(put("/api/documents/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "标签已更新",
+                                  "content": "更新后的正文",
+                                  "tags": ["RAG", "Spring AI"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags", containsInAnyOrder("RAG", "Spring AI")));
+
+        mockMvc.perform(get("/api/documents/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags", containsInAnyOrder("RAG", "Spring AI")));
+    }
+
+    @Test
+    void combinesKeywordAndTagFiltersAndSortsByTitle() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "B 向量资料", "content": "基础", "tags": ["RAG", "Spring AI"]}
+                                """))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "A 向量资料", "content": "实践", "tags": ["RAG"]}
+                                """))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "C 数据库资料", "content": "数据库", "tags": ["Spring AI"]}
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/documents")
+                        .queryParam("q", "资料")
+                        .queryParam("tag", "RAG")
+                        .queryParam("sort", "title"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("A 向量资料", "B 向量资料")));
+    }
+
+    @Test
+    void rejectsMoreThanTenTags() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "标签过多",
+                                  "content": "最多允许十个标签。",
+                                  "tags": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsTagLongerThanThirtyCharacters() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "标签过长",
+                                  "content": "标签长度需要受到限制。",
+                                  "tags": ["1234567890123456789012345678901"]
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void sortsOldestDocumentsFirst() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "先创建", "content": "第一篇", "tags": []}
+                                """))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "后创建", "content": "第二篇", "tags": []}
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/documents").queryParam("sort", "oldest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("先创建", "后创建")));
     }
 }
