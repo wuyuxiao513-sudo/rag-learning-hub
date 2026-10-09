@@ -298,4 +298,130 @@ describe('App', () => {
     expect(wrapper.findAll('.document')).toHaveLength(0)
     expect(wrapper.text()).toContain('文档已更新。')
   })
+
+  it('previews an uploaded file and saves the edited text with its source', async () => {
+    const savedDocument = {
+      id: 21,
+      title: '修订标题',
+      content: '# 修订正文\n<script>alert(1)</script>',
+      tags: ['RAG'],
+      sourceFilename: '原始笔记.md',
+      createdAt: '2026-10-09T10:00:00Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: '原始笔记',
+          content: '# 原始正文\n<script>alert(1)</script>',
+          sourceFilename: '原始笔记.md',
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => savedDocument })
+      .mockResolvedValueOnce({ ok: true, json: async () => [savedDocument] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const fileInput = wrapper.get('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['# 原始正文'], '原始笔记.md', { type: 'text/markdown' })],
+    })
+    await fileInput.trigger('change')
+    await flushPromises()
+
+    const previewCall = fetchMock.mock.calls[1]
+    expect(previewCall[0]).toBe('/api/documents/preview')
+    expect(previewCall[1].body).toBeInstanceOf(FormData)
+    expect(previewCall[1].body.get('file')).toBeInstanceOf(File)
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value)
+      .toContain('<script>alert(1)</script>')
+    expect(wrapper.find('script').exists()).toBe(false)
+    expect(wrapper.text()).toContain('原始笔记.md')
+
+    await wrapper.get('input[placeholder="例如：向量检索基础"]').setValue('修订标题')
+    await wrapper.get('.composer textarea').setValue(savedDocument.content)
+    await wrapper.get('input[placeholder="例如：RAG, Spring AI"]').setValue('RAG')
+    await wrapper.get('.composer button').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '修订标题',
+        content: savedDocument.content,
+        tags: ['RAG'],
+        sourceFilename: '原始笔记.md',
+      }),
+    })
+    expect(wrapper.get('.source-file').text()).toContain('原始笔记.md')
+    expect(wrapper.get('.document p').text()).toContain('<script>alert(1)</script>')
+    expect(wrapper.find('script').exists()).toBe(false)
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('')
+  })
+
+  it('keeps the existing draft when file preview fails', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ detail: '文件必须使用 UTF-8 编码。' }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('input[placeholder="例如：向量检索基础"]').setValue('草稿标题')
+    await wrapper.get('.composer textarea').setValue('草稿正文')
+    const fileInput = wrapper.get('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['bad'], 'bad.txt')],
+    })
+    await fileInput.trigger('change')
+    await flushPromises()
+
+    expect((wrapper.get('input[placeholder="例如：向量检索基础"]').element as HTMLInputElement).value)
+      .toBe('草稿标题')
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('草稿正文')
+    expect(wrapper.text()).toContain('文件必须使用 UTF-8 编码。')
+  })
+
+  it('does not let an older file preview overwrite a newer selection', async () => {
+    let resolveFirst: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ title: '第二份', content: '第二份正文', sourceFilename: 'second.txt' }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const fileInput = wrapper.get('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['first'], 'first.txt')],
+    })
+    await fileInput.trigger('change')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['second'], 'second.txt')],
+    })
+    await fileInput.trigger('change')
+    await flushPromises()
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('第二份正文')
+
+    resolveFirst({
+      ok: true,
+      json: async () => ({ title: '第一份', content: '第一份正文', sourceFilename: 'first.txt' }),
+    })
+    await flushPromises()
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('第二份正文')
+  })
 })

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   createDocument,
   deleteDocument,
+  previewDocument,
   searchDocuments,
   updateDocument,
   type KnowledgeDocument,
@@ -17,6 +18,11 @@ const activeSort = ref('newest')
 const title = ref('')
 const content = ref('')
 const tagsInput = ref('')
+const sourceFilename = ref('')
+const importMessage = ref('')
+const previewing = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+let previewRequestId = 0
 const documents = ref<KnowledgeDocument[]>([])
 const availableTags = ref<string[]>([])
 const message = ref('')
@@ -43,6 +49,29 @@ function rememberTags(results: KnowledgeDocument[]) {
   const tags = results.flatMap((document) => document.tags ?? [])
   availableTags.value = [...new Set([...availableTags.value, ...tags])]
     .sort((left, right) => left.localeCompare(right))
+}
+
+async function previewFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const requestId = ++previewRequestId
+  previewing.value = true
+  importMessage.value = ''
+  try {
+    const preview = await previewDocument(file)
+    if (requestId !== previewRequestId) return
+    title.value = preview.title
+    content.value = preview.content
+    sourceFilename.value = preview.sourceFilename
+    importMessage.value = '文件已解析，请确认内容后保存。'
+  } catch (error) {
+    if (requestId !== previewRequestId) return
+    importMessage.value = error instanceof Error ? error.message : '文件解析失败。'
+  } finally {
+    if (requestId === previewRequestId) previewing.value = false
+  }
 }
 
 async function search(): Promise<boolean> {
@@ -76,10 +105,15 @@ async function save() {
   loading.value = true
   message.value = ''
   try {
-    await createDocument(title.value, content.value, parseTags(tagsInput.value))
+    await createDocument(
+      title.value, content.value, parseTags(tagsInput.value), sourceFilename.value || undefined,
+    )
     title.value = ''
     content.value = ''
     tagsInput.value = ''
+    sourceFilename.value = ''
+    importMessage.value = ''
+    if (fileInput.value) fileInput.value.value = ''
     const refreshed = await search()
     if (refreshed) message.value = '文档已保存。'
   } catch (error) {
@@ -165,6 +199,18 @@ onMounted(search)
         <span>01</span>
         <h2>添加学习资料</h2>
       </div>
+      <label class="import-control">
+        导入 Markdown / TXT 文件
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".md,.markdown,.txt"
+          @change="previewFile"
+        />
+      </label>
+      <p v-if="previewing" class="import-status" aria-live="polite">正在解析文件…</p>
+      <p v-else-if="importMessage" class="import-status" aria-live="polite">{{ importMessage }}</p>
+      <p v-if="sourceFilename" class="import-source">来源：{{ sourceFilename }}</p>
       <label>
         标题
         <input v-model="title" maxlength="200" placeholder="例如：向量检索基础" />
@@ -177,7 +223,7 @@ onMounted(search)
         标签
         <input v-model="tagsInput" maxlength="320" placeholder="例如：RAG, Spring AI" />
       </label>
-      <button :disabled="loading" @click="save">保存文档</button>
+      <button :disabled="loading || previewing" @click="save">保存文档</button>
     </section>
 
     <section class="panel results">
@@ -269,6 +315,9 @@ onMounted(search)
           <div class="document-heading">
             <div>
               <small>#{{ document.id }} · {{ new Date(document.createdAt).toLocaleString() }}</small>
+              <small v-if="document.sourceFilename" class="source-file">
+                来源：{{ document.sourceFilename }}
+              </small>
               <h3>{{ document.title }}</h3>
               <div v-if="document.tags?.length" class="tag-list">
                 <button

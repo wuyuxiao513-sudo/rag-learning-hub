@@ -47,6 +47,10 @@ h1 { margin: 12px 0 8px; font-size: clamp(2.4rem, 8vw, 5.7rem); letter-spacing: 
 h2, h3 { margin: 0; }
 
 label { display: grid; gap: 8px; margin-bottom: 18px; color: #536159; font-size: .86rem; font-weight: 700; }
+.import-control { padding: 14px; border: 1px dashed #9cbaa4; border-radius: 13px; background: #f4faf5; }
+.import-control input { padding: 9px; background: white; }
+.import-status, .import-source { margin: -8px 0 18px; color: #28744a; font-size: .84rem; }
+.source-file { display: block; margin-top: 4px; overflow-wrap: anywhere; }
 input, textarea, select {
   width: 100%;
   border: 1px solid #ccd7cf;

@@ -4,6 +4,27 @@ export interface KnowledgeDocument {
   content: string
   tags: string[]
   createdAt: string
+  sourceFilename?: string | null
+}
+
+export interface DocumentPreview {
+  title: string
+  content: string
+  sourceFilename: string
+}
+
+export async function previewDocument(file: File): Promise<DocumentPreview> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await fetch('/api/documents/preview', {
+    method: 'POST',
+    body: formData,
+  })
+  if (!response.ok) {
+    const problem = await response.json().catch(() => null) as { detail?: string } | null
+    throw new Error(problem?.detail || '解析失败，请选择有效的 Markdown 或 TXT 文件。')
+  }
+  return response.json()
 }
 
 export async function searchDocuments(
@@ -25,11 +46,17 @@ export async function createDocument(
   title: string,
   content: string,
   tags: string[],
+  sourceFilename?: string,
 ): Promise<KnowledgeDocument> {
   const response = await fetch('/api/documents', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content, tags }),
+    body: JSON.stringify({
+      title,
+      content,
+      tags,
+      ...(sourceFilename ? { sourceFilename } : {}),
+    }),
   })
   if (!response.ok) throw new Error('保存失败，请检查标题和正文。')
   return response.json()
