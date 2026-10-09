@@ -55,6 +55,7 @@ async function previewFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  input.value = ''
 
   const requestId = ++previewRequestId
   previewing.value = true

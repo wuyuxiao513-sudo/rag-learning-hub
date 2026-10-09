@@ -390,6 +390,33 @@ describe('App', () => {
     expect(wrapper.text()).toContain('文件必须使用 UTF-8 编码。')
   })
 
+  it('clears the picker after parsing so the same file can be selected again', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ title: '笔记', content: '正文', sourceFilename: 'same.txt' }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const fileInput = wrapper.get('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', {
+      configurable: true,
+      value: [new File(['正文'], 'same.txt')],
+    })
+    Object.defineProperty(fileInput.element, 'value', {
+      configurable: true,
+      writable: true,
+      value: 'C:\\fakepath\\same.txt',
+    })
+    await fileInput.trigger('change')
+    await flushPromises()
+
+    expect((fileInput.element as HTMLInputElement).value).toBe('')
+  })
+
   it('does not let an older file preview overwrite a newer selection', async () => {
     let resolveFirst: (value: unknown) => void = () => {}
     const fetchMock = vi.fn()
