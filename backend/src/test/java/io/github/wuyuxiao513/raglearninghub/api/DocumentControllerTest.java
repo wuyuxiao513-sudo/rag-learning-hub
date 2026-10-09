@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.nullValue;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -246,5 +247,60 @@ class DocumentControllerTest {
         mockMvc.perform(get("/api/documents").queryParam("sort", "oldest"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].title", contains("先创建", "后创建")));
+    }
+
+    @Test
+    void savesImportedSourceFilenameAndPreservesItOnEdit() throws Exception {
+        String response = mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "导入资料",
+                                  "content": "# 导入正文",
+                                  "sourceFilename": "C:/notes/资料.md"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceFilename").value("资料.md"))
+                .andReturn().getResponse().getContentAsString();
+
+        long id = Long.parseLong(response.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+        mockMvc.perform(put("/api/documents/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "改过标题", "content": "改过正文", "tags": ["RAG"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceFilename").value("资料.md"));
+        mockMvc.perform(get("/api/documents/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceFilename").value("资料.md"));
+    }
+
+    @Test
+    void manualDocumentHasNullSourceFilename() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "手动创建", "content": "没有原文件。"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceFilename").value(nullValue()));
+    }
+
+    @Test
+    void rejectsBlankAndTooLongSourceFilenames() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "资料", "content": "正文", "sourceFilename": "  "}
+                                """))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "资料", "content": "正文", "sourceFilename": "%s"}
+                                """.formatted("x".repeat(256))))
+                .andExpect(status().isBadRequest());
     }
 }

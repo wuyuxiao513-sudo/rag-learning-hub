@@ -30,6 +30,9 @@ public class KnowledgeDocument {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(length = 255)
+    private String sourceFilename;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -41,9 +44,10 @@ public class KnowledgeDocument {
     protected KnowledgeDocument() {
     }
 
-    public KnowledgeDocument(String title, String content, Collection<String> tags) {
+    public KnowledgeDocument(String title, String content, Collection<String> tags, String sourceFilename) {
         this.title = title;
         this.content = content;
+        this.sourceFilename = sourceFilename;
         this.tags.addAll(tags);
         this.createdAt = Instant.now();
     }
@@ -62,6 +66,10 @@ public class KnowledgeDocument {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public String getSourceFilename() {
+        return sourceFilename;
     }
 
     public Set<String> getTags() {

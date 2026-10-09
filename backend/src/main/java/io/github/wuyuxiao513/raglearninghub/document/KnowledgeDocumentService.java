@@ -1,5 +1,6 @@
 package io.github.wuyuxiao513.raglearninghub.document;
 
+import io.github.wuyuxiao513.raglearninghub.document.importing.DocumentImportService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,8 +22,11 @@ public class KnowledgeDocumentService {
     }
 
     @Transactional
-    public KnowledgeDocument create(String title, String content, List<String> tags) {
-        return repository.save(new KnowledgeDocument(title.strip(), content.strip(), normalizeTags(tags)));
+    public KnowledgeDocument create(String title, String content, List<String> tags, String sourceFilename) {
+        String normalizedFilename = sourceFilename == null
+                ? null : DocumentImportService.normalizeFilename(sourceFilename);
+        return repository.save(new KnowledgeDocument(
+                title.strip(), content.strip(), normalizeTags(tags), normalizedFilename));
     }
 
     public List<KnowledgeDocument> search(String query, String tag, String sort) {

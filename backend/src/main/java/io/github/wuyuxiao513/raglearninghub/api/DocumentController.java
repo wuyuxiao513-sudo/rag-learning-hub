@@ -45,7 +45,8 @@ public class DocumentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DocumentResponse create(@Valid @RequestBody CreateDocumentRequest request) {
-        return DocumentResponse.from(service.create(request.title(), request.content(), request.tags()));
+        return DocumentResponse.from(service.create(
+                request.title(), request.content(), request.tags(), request.sourceFilename()));
     }
 
     @GetMapping
@@ -79,7 +80,8 @@ public class DocumentController {
     public record CreateDocumentRequest(
             @NotBlank @Size(max = 200) String title,
             @NotBlank @Size(max = 100_000) String content,
-            @Size(max = 10) List<@NotBlank @Size(max = 30) String> tags
+            @Size(max = 10) List<@NotBlank @Size(max = 30) String> tags,
+            String sourceFilename
     ) {
     }
 
@@ -90,14 +92,17 @@ public class DocumentController {
     ) {
     }
 
-    public record DocumentResponse(Long id, String title, String content, Instant createdAt, List<String> tags) {
+    public record DocumentResponse(
+            Long id, String title, String content, Instant createdAt, List<String> tags, String sourceFilename
+    ) {
         static DocumentResponse from(KnowledgeDocument document) {
             return new DocumentResponse(
                     document.getId(),
                     document.getTitle(),
                     document.getContent(),
                     document.getCreatedAt(),
-                    document.getTags().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList()
+                    document.getTags().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList(),
+                    document.getSourceFilename()
             );
         }
     }
