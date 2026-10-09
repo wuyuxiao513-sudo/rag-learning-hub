@@ -2,10 +2,13 @@ package io.github.wuyuxiao513.raglearninghub.api;
 
 import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocument;
 import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocumentService;
+import io.github.wuyuxiao513.raglearninghub.document.importing.DocumentImportService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,9 +30,16 @@ import java.util.List;
 public class DocumentController {
 
     private final KnowledgeDocumentService service;
+    private final DocumentImportService importService;
 
-    public DocumentController(KnowledgeDocumentService service) {
+    public DocumentController(KnowledgeDocumentService service, DocumentImportService importService) {
         this.service = service;
+        this.importService = importService;
+    }
+
+    @PostMapping(path = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public DocumentImportService.Preview preview(@RequestParam("file") MultipartFile file) {
+        return importService.preview(file);
     }
 
     @PostMapping
