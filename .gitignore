@@ -12,3 +12,4 @@ frontend/.env.local
 frontend/*.tsbuildinfo
 
 .env
+.worktrees/
