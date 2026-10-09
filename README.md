@@ -8,12 +8,14 @@
 - 每个里程碑都有可验证的功能，适合长期维护，而不是一次性 Demo。
 - 记录架构决策、实验数据和踩坑过程，形成可复用的学习资料。
 
-## 当前版本：v0.1.3 Tags & Filters
+## 当前版本：v0.2.0 Markdown/TXT 导入
 
 - 创建、查看、编辑和删除文档
 - 每篇文档最多添加 10 个自由标签
 - 关键词与标签组合筛选，支持最新、最早和标题排序
 - 点击标签直接筛选，并可一键清空搜索条件
+- 上传 Markdown/TXT 文件，预览并修改解析出的标题、正文和标签后保存
+- 仅保存解析后的文字和原文件名；不保存原始文件
 - Vue 3 单页界面、结果数量与操作状态反馈
 - H2 本地数据库与 Flyway 迁移
 - Actuator 健康检查
@@ -61,6 +63,14 @@ cd backend
 
 ## API
 
+文件预览不会写入数据库。支持 `.md`、`.markdown` 和 `.txt`，文件不超过 1 MiB，编码必须是 UTF-8；解析后正文最多 100,000 字符。
+
+```bash
+curl -F "file=@notes.md" http://localhost:8080/api/documents/preview
+```
+
+预览结果包含 `title`、`content` 和 `sourceFilename`。确认内容后，通过现有创建接口保存；导入文档可在请求中额外传入 `sourceFilename`。手动创建时省略该字段即可。
+
 ```http
 POST /api/documents
 Content-Type: application/json
@@ -97,7 +107,8 @@ DELETE /api/documents/{id}
 - [x] v0.1.1：文档删除、状态反馈与前端组件测试
 - [x] v0.1.2：文档编辑、清空搜索与交互反馈
 - [x] v0.1.3：多标签、组合筛选与排序
-- [ ] v0.2：Markdown/PDF 上传、解析和分块
+- [x] v0.2.0：Markdown/TXT 导入、可编辑预览与来源文件名
+- [ ] v0.2.1：PDF 导入、分块预览与重复内容校验
 - [ ] v0.3：Embedding 与 Qdrant 向量检索
 - [ ] v0.4：Spring AI 问答、引用溯源
 - [ ] v0.5：BM25 + 向量混合检索、重排序
