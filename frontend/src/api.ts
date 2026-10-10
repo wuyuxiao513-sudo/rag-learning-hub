@@ -22,7 +22,7 @@ export async function previewDocument(file: File): Promise<DocumentPreview> {
   })
   if (!response.ok) {
     const problem = await response.json().catch(() => null) as { detail?: string } | null
-    throw new Error(problem?.detail || '解析失败，请选择有效的 Markdown 或 TXT 文件。')
+    throw new Error(problem?.detail || '解析失败，请选择有效的 Markdown、TXT 或 PDF 文件。')
   }
   return response.json()
 }

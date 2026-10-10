@@ -13,7 +13,7 @@
 
     <groupId>io.github.wuyuxiao513</groupId>
     <artifactId>rag-learning-hub-backend</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.1-SNAPSHOT</version>
     <name>RAG Learning Hub Backend</name>
     <description>Progressive RAG learning project backend</description>
 
@@ -41,6 +41,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.8</version>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

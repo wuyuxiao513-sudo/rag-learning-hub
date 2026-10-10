@@ -451,4 +451,33 @@ describe('App', () => {
     await flushPromises()
     expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('第二份正文')
   })
+
+  it('offers PDF selection and previews its extracted text', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: '资料',
+          content: 'PDF 中提取的正文',
+          sourceFilename: '资料.pdf',
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const input = wrapper.get('input[type="file"]')
+    expect(input.attributes('accept')).toContain('.pdf')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File(['pdf'], '资料.pdf', { type: 'application/pdf' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value)
+      .toBe('PDF 中提取的正文')
+    expect(wrapper.text()).toContain('资料.pdf')
+  })
 })

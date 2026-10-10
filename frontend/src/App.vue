@@ -201,11 +201,11 @@ onMounted(search)
         <h2>添加学习资料</h2>
       </div>
       <label class="import-control">
-        导入 Markdown / TXT 文件
+        导入 Markdown / TXT / PDF 文件
         <input
           ref="fileInput"
           type="file"
-          accept=".md,.markdown,.txt"
+          accept=".md,.markdown,.txt,.pdf"
           @change="previewFile"
         />
       </label>

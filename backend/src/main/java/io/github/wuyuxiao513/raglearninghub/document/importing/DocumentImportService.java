@@ -25,14 +25,14 @@ public class DocumentImportService {
         String filename = normalizeFilename(file.getOriginalFilename());
         int dot = filename.lastIndexOf('.');
         if (dot <= 0 || dot == filename.length() - 1) {
-            throw new DocumentImportException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "仅支持 Markdown 和 TXT 文件。");
+            throw new DocumentImportException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "仅支持 Markdown、TXT 和 PDF 文件。");
         }
         String extension = filename.substring(dot + 1).toLowerCase(Locale.ROOT);
         DocumentTextParser parser = parsers.stream()
                 .filter(candidate -> candidate.supports(extension))
                 .findFirst()
                 .orElseThrow(() -> new DocumentImportException(
-                        HttpStatus.UNSUPPORTED_MEDIA_TYPE, "仅支持 Markdown 和 TXT 文件。"));
+                        HttpStatus.UNSUPPORTED_MEDIA_TYPE, "仅支持 Markdown、TXT 和 PDF 文件。"));
 
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new DocumentImportException(HttpStatus.PAYLOAD_TOO_LARGE, "文件不能超过 1 MiB。");
