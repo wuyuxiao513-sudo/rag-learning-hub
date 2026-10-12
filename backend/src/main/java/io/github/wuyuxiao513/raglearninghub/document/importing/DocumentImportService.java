@@ -1,5 +1,6 @@
 package io.github.wuyuxiao513.raglearninghub.document.importing;
 
+import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocumentRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,9 +14,11 @@ public class DocumentImportService {
     private static final long MAX_FILE_SIZE = 1_048_576;
     private static final int MAX_CONTENT_LENGTH = 100_000;
     private final List<DocumentTextParser> parsers;
+    private final KnowledgeDocumentRepository repository;
 
-    public DocumentImportService(List<DocumentTextParser> parsers) {
+    public DocumentImportService(List<DocumentTextParser> parsers, KnowledgeDocumentRepository repository) {
         this.parsers = parsers;
+        this.repository = repository;
     }
 
     public Preview preview(MultipartFile file) {
@@ -67,7 +70,10 @@ public class DocumentImportService {
                 title = title.substring(0, title.length() - 1);
             }
         }
-        return new Preview(title, content, filename);
+        DuplicateDocument duplicate = repository.findFirstByContentOrderByIdAsc(content.strip())
+                .map(document -> new DuplicateDocument(document.getId(), document.getTitle()))
+                .orElse(null);
+        return new Preview(title, content, filename, duplicate);
     }
 
     public static String normalizeFilename(String rawFilename) {
@@ -80,6 +86,9 @@ public class DocumentImportService {
         return filename;
     }
 
-    public record Preview(String title, String content, String sourceFilename) {
+    public record Preview(String title, String content, String sourceFilename, DuplicateDocument duplicateDocument) {
+    }
+
+    public record DuplicateDocument(Long id, String title) {
     }
 }

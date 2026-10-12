@@ -11,6 +11,7 @@ export interface DocumentPreview {
   title: string
   content: string
   sourceFilename: string
+  duplicateDocument?: { id: number; title: string } | null
 }
 
 export async function previewDocument(file: File): Promise<DocumentPreview> {

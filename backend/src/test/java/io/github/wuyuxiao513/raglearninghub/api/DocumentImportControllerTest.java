@@ -1,6 +1,7 @@
 package io.github.wuyuxiao513.raglearninghub.api;
 
 import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocumentRepository;
+import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocument;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -48,8 +50,22 @@ class DocumentImportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("向量检索"))
                 .andExpect(jsonPath("$.sourceFilename").value("向量检索.md"))
+                .andExpect(jsonPath("$.duplicateDocument").doesNotExist())
                 .andExpect(jsonPath("$.content").value("# 向量检索\n<script>alert(1)</script>"));
         assertThat(repository.count()).isZero();
+    }
+
+    @Test
+    void warnsAboutExistingDocumentWithSameContentWithoutBlockingPreview() throws Exception {
+        KnowledgeDocument existing = repository.save(new KnowledgeDocument(
+                "已有资料", "相同正文", List.of(), "old.txt"));
+
+        mockMvc.perform(multipart("/api/documents/preview").file(file("new.txt", "  相同正文  ")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("  相同正文  "))
+                .andExpect(jsonPath("$.duplicateDocument.id").value(existing.getId()))
+                .andExpect(jsonPath("$.duplicateDocument.title").value("已有资料"));
+        assertThat(repository.count()).isEqualTo(1);
     }
 
     @Test

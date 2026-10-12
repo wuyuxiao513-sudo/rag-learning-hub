@@ -66,7 +66,9 @@ async function previewFile(event: Event) {
     title.value = preview.title
     content.value = preview.content
     sourceFilename.value = preview.sourceFilename
-    importMessage.value = '文件已解析，请确认内容后保存。'
+    importMessage.value = preview.duplicateDocument
+      ? `发现重复正文：已有文档“${preview.duplicateDocument.title}”。仍可编辑或保存。`
+      : '文件已解析，请确认内容后保存。'
   } catch (error) {
     if (requestId !== previewRequestId) return
     importMessage.value = error instanceof Error ? error.message : '文件解析失败。'

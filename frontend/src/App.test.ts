@@ -363,6 +363,43 @@ describe('App', () => {
     expect((wrapper.get('.composer textarea').element as HTMLTextAreaElement).value).toBe('')
   })
 
+  it('warns about matching existing content but still allows saving', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          title: '新资料', content: '相同正文', sourceFilename: 'new.txt',
+          duplicateDocument: { id: 7, title: '已有资料' },
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        id: 8, title: '新资料', content: '相同正文', tags: [],
+        sourceFilename: 'new.txt', createdAt: '2026-10-12T00:00:00Z',
+      }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const input = wrapper.get('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File(['相同正文'], 'new.txt', { type: 'text/plain' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('已有资料')
+    expect(wrapper.text()).toContain('重复')
+    expect(wrapper.get('.composer button').attributes('disabled')).toBeUndefined()
+    await wrapper.get('.composer button').trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents', expect.objectContaining({
+      method: 'POST',
+    }))
+  })
+
   it('keeps the existing draft when file preview fails', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => [] })
