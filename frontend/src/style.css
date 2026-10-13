@@ -51,6 +51,15 @@ label { display: grid; gap: 8px; margin-bottom: 18px; color: #536159; font-size:
 .import-control input { padding: 9px; background: white; }
 .import-status, .import-source { margin: -8px 0 18px; color: #28744a; font-size: .84rem; }
 .source-file { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.chunk-section { margin: 0 0 18px; padding: 16px; border: 1px solid #d7e4da; border-radius: 13px; background: #f4faf5; }
+.chunk-section h3 { font-size: 1rem; }
+.chunk-section p { margin: 8px 0 16px; color: #536159; font-size: .82rem; }
+.chunk-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.chunk-settings label { margin-bottom: 12px; }
+.chunk-list { max-height: 360px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.chunk-preview { margin-top: 10px; padding: 12px; border: 1px solid #d7e4da; border-radius: 10px; background: white; }
+.chunk-preview span { color: #28744a; font-size: .8rem; font-weight: 700; }
+.chunk-content { margin: 8px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; font: inherit; font-size: .84rem; }
 input, textarea, select {
   width: 100%;
   border: 1px solid #ccd7cf;

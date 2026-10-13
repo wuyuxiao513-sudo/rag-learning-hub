@@ -21,6 +21,8 @@ const tagsInput = ref('')
 const sourceFilename = ref('')
 const importMessage = ref('')
 const previewing = ref(false)
+const chunkSize = ref(500)
+const chunkOverlap = ref(50)
 const fileInput = ref<HTMLInputElement | null>(null)
 let previewRequestId = 0
 const documents = ref<KnowledgeDocument[]>([])
@@ -36,6 +38,17 @@ const editTagsInput = ref('')
 const hasActiveSearch = computed(() => (
   Boolean(activeQuery.value || activeTag.value) || activeSort.value !== 'newest'
 ))
+const chunks = computed(() => {
+  if (!content.value.trim()) return []
+  const characters = Array.from(content.value)
+  const result: string[] = []
+  const step = chunkSize.value - chunkOverlap.value
+  for (let offset = 0; offset < characters.length; offset += step) {
+    result.push(characters.slice(offset, offset + chunkSize.value).join(''))
+    if (offset + chunkSize.value >= characters.length) break
+  }
+  return result
+})
 
 function parseTags(value: string): string[] {
   const tags = value
@@ -226,6 +239,34 @@ onMounted(search)
         标签
         <input v-model="tagsInput" maxlength="320" placeholder="例如：RAG, Spring AI" />
       </label>
+      <section v-if="chunks.length" class="chunk-section" aria-label="分块预览">
+        <h3>分块预览 · {{ chunks.length }} 块</h3>
+        <p>仅供查看，不改变保存的正文。</p>
+        <div class="chunk-settings">
+          <label>
+            每块字符数
+            <select v-model.number="chunkSize" aria-label="分块大小">
+              <option :value="300">300</option>
+              <option :value="500">500</option>
+              <option :value="1000">1000</option>
+            </select>
+          </label>
+          <label>
+            重叠字符数
+            <select v-model.number="chunkOverlap" aria-label="重叠字符数">
+              <option :value="0">0</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </label>
+        </div>
+        <ol class="chunk-list">
+          <li v-for="(chunk, index) in chunks" :key="index" class="chunk-preview">
+            <span>第 {{ index + 1 }} 块 · {{ Array.from(chunk).length }} 字符</span>
+            <pre class="chunk-content">{{ chunk }}</pre>
+          </li>
+        </ol>
+      </section>
       <button :disabled="loading || previewing" @click="save">保存文档</button>
     </section>
 

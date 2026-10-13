@@ -517,4 +517,52 @@ describe('App', () => {
       .toBe('PDF 中提取的正文')
     expect(wrapper.text()).toContain('资料.pdf')
   })
+
+  it('shows overlapping chunks from an import and updates them when content or settings change', async () => {
+    const body = 'A'.repeat(300) + 'B'.repeat(300)
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        title: '长文', content: body, sourceFilename: 'long.txt', duplicateDocument: null,
+      }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(0)
+    const input = wrapper.get('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File([body], 'long.txt', { type: 'text/plain' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(2)
+    expect(wrapper.findAll('.chunk-content')[0].text()).toBe('A'.repeat(300) + 'B'.repeat(200))
+    expect(wrapper.findAll('.chunk-content')[1].text()).toBe('B'.repeat(150))
+
+    await wrapper.get('select[aria-label="分块大小"]').setValue('300')
+    await wrapper.get('select[aria-label="重叠字符数"]').setValue('100')
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(3)
+    expect(wrapper.findAll('.chunk-content')[1].text()).toBe('A'.repeat(100) + 'B'.repeat(200))
+
+    await wrapper.get('.composer textarea').setValue('已修改正文')
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(1)
+    expect(wrapper.find('.chunk-content').text()).toBe('已修改正文')
+  })
+
+  it('does not split emoji in the middle of a chunk', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }))
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('.composer textarea').setValue('🙂'.repeat(301))
+
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(1)
+    expect(wrapper.find('.chunk-content').text()).toBe('🙂'.repeat(301))
+    await wrapper.get('select[aria-label="分块大小"]').setValue('300')
+    expect(wrapper.findAll('.chunk-preview')).toHaveLength(2)
+    expect(wrapper.findAll('.chunk-content')[0].text()).toBe('🙂'.repeat(300))
+    expect(wrapper.findAll('.chunk-content')[1].text()).toBe('🙂'.repeat(51))
+  })
 })
