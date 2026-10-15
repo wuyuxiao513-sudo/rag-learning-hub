@@ -56,6 +56,7 @@ label { display: grid; gap: 8px; margin-bottom: 18px; color: #536159; font-size:
 .chunk-section p { margin: 8px 0 16px; color: #536159; font-size: .82rem; }
 .chunk-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .chunk-settings label { margin-bottom: 12px; }
+.chunk-download { margin-bottom: 4px; padding: 9px 12px; font-size: .82rem; }
 .chunk-list { max-height: 360px; margin: 0; padding: 0; overflow: auto; list-style: none; }
 .chunk-preview { margin-top: 10px; padding: 12px; border: 1px solid #d7e4da; border-radius: 10px; background: white; }
 .chunk-preview span { color: #28744a; font-size: .8rem; font-weight: 700; }

@@ -50,6 +50,24 @@ const chunks = computed(() => {
   return result
 })
 
+function downloadChunks() {
+  if (!chunks.value.length) return
+  const data = {
+    title: title.value,
+    sourceFilename: sourceFilename.value || null,
+    chunkSize: chunkSize.value,
+    overlap: chunkOverlap.value,
+    chunks: chunks.value.map((chunk, index) => ({ index: index + 1, content: chunk })),
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'chunks.json'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function parseTags(value: string): string[] {
   const tags = value
     .split(/[,，]/)
@@ -260,6 +278,9 @@ onMounted(search)
             </select>
           </label>
         </div>
+        <button class="secondary-button chunk-download" type="button" aria-label="下载分块 JSON" @click="downloadChunks">
+          下载分块 JSON
+        </button>
         <ol class="chunk-list">
           <li v-for="(chunk, index) in chunks" :key="index" class="chunk-preview">
             <span>第 {{ index + 1 }} 块 · {{ Array.from(chunk).length }} 字符</span>

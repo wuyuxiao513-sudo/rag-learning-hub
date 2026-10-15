@@ -102,7 +102,7 @@ describe('App', () => {
     await flushPromises()
     await wrapper.get('input[placeholder="例如：向量检索基础"]').setValue('新资料')
     await wrapper.get('textarea').setValue('保存状态需要保留。')
-    await wrapper.get('.composer button').trigger('click')
+    await wrapper.get('.composer > button').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('文档已保存。')
@@ -205,7 +205,7 @@ describe('App', () => {
     await wrapper.get('input[placeholder="例如：向量检索基础"]').setValue('标签资料')
     await wrapper.get('.composer textarea').setValue('标签正文。')
     await wrapper.get('input[placeholder="例如：RAG, Spring AI"]').setValue('RAG，Spring AI')
-    await wrapper.get('.composer button').trigger('click')
+    await wrapper.get('.composer > button').trigger('click')
     await flushPromises()
 
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/documents', {
@@ -344,7 +344,7 @@ describe('App', () => {
     await wrapper.get('input[placeholder="例如：向量检索基础"]').setValue('修订标题')
     await wrapper.get('.composer textarea').setValue(savedDocument.content)
     await wrapper.get('input[placeholder="例如：RAG, Spring AI"]').setValue('RAG')
-    await wrapper.get('.composer button').trigger('click')
+    await wrapper.get('.composer > button').trigger('click')
     await flushPromises()
 
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents', {
@@ -392,8 +392,8 @@ describe('App', () => {
 
     expect(wrapper.text()).toContain('已有资料')
     expect(wrapper.text()).toContain('重复')
-    expect(wrapper.get('.composer button').attributes('disabled')).toBeUndefined()
-    await wrapper.get('.composer button').trigger('click')
+    expect(wrapper.get('.composer > button').attributes('disabled')).toBeUndefined()
+    await wrapper.get('.composer > button').trigger('click')
     await flushPromises()
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents', expect.objectContaining({
       method: 'POST',
@@ -564,5 +564,56 @@ describe('App', () => {
     expect(wrapper.findAll('.chunk-preview')).toHaveLength(2)
     expect(wrapper.findAll('.chunk-content')[0].text()).toBe('🙂'.repeat(300))
     expect(wrapper.findAll('.chunk-content')[1].text()).toBe('🙂'.repeat(51))
+  })
+
+  it('downloads current chunk data as JSON without sending another request', async () => {
+    const body = 'A'.repeat(300) + 'B'.repeat(300)
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        title: '资料', content: body, sourceFilename: 'notes.txt', duplicateDocument: null,
+      }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const blobs: Blob[] = []
+    const createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob)
+      return 'blob:chunks-test'
+    })
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    const downloads: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download)
+    })
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.find('button[aria-label="下载分块 JSON"]').exists()).toBe(false)
+    const input = wrapper.get('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      configurable: true,
+      value: [new File([body], 'notes.txt', { type: 'text/plain' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+    await wrapper.get('select[aria-label="分块大小"]').setValue('300')
+    await wrapper.get('select[aria-label="重叠字符数"]').setValue('100')
+    await wrapper.get('button[aria-label="下载分块 JSON"]').trigger('click')
+
+    expect(downloads).toEqual(['chunks.json'])
+    expect(JSON.parse(await blobs[0].text())).toEqual({
+      title: '资料',
+      sourceFilename: 'notes.txt',
+      chunkSize: 300,
+      overlap: 100,
+      chunks: [
+        { index: 1, content: 'A'.repeat(300) },
+        { index: 2, content: 'A'.repeat(100) + 'B'.repeat(200) },
+        { index: 3, content: 'B'.repeat(200) },
+      ],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:chunks-test')
+    click.mockRestore()
   })
 })
