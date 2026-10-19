@@ -91,6 +91,7 @@ button:disabled { cursor: wait; opacity: .6; }
 .tag-pill { padding: 5px 9px; color: #28744a; background: #e4f2e8; font-size: .74rem; }
 .tag-pill:hover { color: white; background: #28744a; }
 .document p { margin-bottom: 0; color: #4f5c54; line-height: 1.65; white-space: pre-wrap; }
+.document mark { padding: 0 2px; border-radius: 3px; color: #17231d; background: #ffe39a; }
 .document-edit label:last-of-type { margin-bottom: 12px; }
 .secondary-button { color: #34483c; background: transparent; border: 1px solid #c5d2c9; }
 .secondary-button:hover { color: white; background: #476353; }

@@ -50,6 +50,15 @@ const chunks = computed(() => {
   return result
 })
 
+function highlightedParts(value: string): { text: string; match: boolean }[] {
+  if (!activeQuery.value) return [{ text: value, match: false }]
+  const escaped = activeQuery.value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
+  return value
+    .split(new RegExp('(' + escaped + ')', 'gi'))
+    .map((text, index) => ({ text, match: index % 2 === 1 }))
+    .filter((part) => part.text.length > 0)
+}
+
 function downloadChunks() {
   if (!chunks.value.length) return
   const data = {
@@ -383,7 +392,11 @@ onMounted(search)
               <small v-if="document.sourceFilename" class="source-file">
                 来源：{{ document.sourceFilename }}
               </small>
-              <h3>{{ document.title }}</h3>
+              <h3>
+                <template v-for="(part, index) in highlightedParts(document.title)" :key="index">
+                  <mark v-if="part.match">{{ part.text }}</mark><template v-else>{{ part.text }}</template>
+                </template>
+              </h3>
               <div v-if="document.tags?.length" class="tag-list">
                 <button
                   v-for="tag in document.tags"
@@ -416,7 +429,11 @@ onMounted(search)
               </button>
             </div>
           </div>
-          <p>{{ document.content }}</p>
+          <p>
+            <template v-for="(part, index) in highlightedParts(document.content)" :key="index">
+              <mark v-if="part.match">{{ part.text }}</mark><template v-else>{{ part.text }}</template>
+            </template>
+          </p>
         </template>
       </article>
     </section>

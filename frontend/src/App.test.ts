@@ -616,4 +616,51 @@ describe('App', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:chunks-test')
     click.mockRestore()
   })
+
+  it('highlights only the submitted keyword and clears highlights with the search', async () => {
+    const document = {
+      id: 31, title: 'RAG 入门', content: '学习 rag 与 RaG。', tags: [],
+      createdAt: '2026-10-19T00:00:00Z', sourceFilename: null,
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [document] }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    const searchInput = wrapper.get('input[placeholder="输入标题或正文关键词"]')
+    await searchInput.setValue('rag')
+    expect(wrapper.findAll('.document mark')).toHaveLength(0)
+
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.document h3').text()).toBe('RAG 入门')
+    expect(wrapper.get('.document p').text()).toBe('学习 rag 与 RaG。')
+    expect(wrapper.findAll('.document mark').map((item) => item.text())).toEqual(['RAG', 'rag', 'RaG'])
+
+    await searchInput.setValue('其他词')
+    expect(wrapper.findAll('.document mark').map((item) => item.text())).toEqual(['RAG', 'rag', 'RaG'])
+    await wrapper.get('.clear-search').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.document mark')).toHaveLength(0)
+  })
+
+  it('treats special search characters literally and never renders document HTML', async () => {
+    const document = {
+      id: 32, title: '<script>alert(1)</script> C++',
+      content: 'C++ <img src=x onerror=alert(1)>', tags: [],
+      createdAt: '2026-10-19T00:00:00Z', sourceFilename: null,
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [document] }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('C++')
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.findAll('.document mark').map((item) => item.text())).toEqual(['C++', 'C++'])
+    expect(wrapper.get('.document h3').text()).toContain('<script>alert(1)</script>')
+    expect(wrapper.get('.document p').text()).toContain('<img src=x onerror=alert(1)>')
+    expect(wrapper.find('.document script').exists()).toBe(false)
+    expect(wrapper.find('.document img').exists()).toBe(false)
+  })
 })
