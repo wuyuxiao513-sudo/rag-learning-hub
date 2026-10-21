@@ -123,6 +123,7 @@ async function previewFile(event: Event) {
 
 async function search(): Promise<boolean> {
   const requestId = ++searchRequestId
+  loadingMore.value = false
   const requestedQuery = query.value.trim()
   const requestedTag = selectedTag.value
   const requestedSort = sortOrder.value

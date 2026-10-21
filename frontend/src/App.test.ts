@@ -778,4 +778,33 @@ describe('App', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?tag=RAG')
     expect(wrapper.findAll('.document')).toHaveLength(1)
   })
+
+  it('allows another Load More attempt if a replacement search fails', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: ['RAG'],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    let resolveLaterPage!: (value: object) => void
+    const laterPage = new Promise<object>((resolve) => { resolveLaterPage = resolve })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'true' }, json: async () => firstPage })
+      .mockReturnValueOnce(laterPage)
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [{ ...firstPage[0], id: 21 }] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('.load-more').trigger('click')
+    await wrapper.get('.tag-pill').trigger('click')
+    await flushPromises()
+    resolveLaterPage({ ok: true, headers: { get: () => 'false' }, json: async () => [] })
+    await flushPromises()
+
+    expect(wrapper.get('.load-more').attributes('disabled')).toBeUndefined()
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/documents?page=1')
+    expect(wrapper.findAll('.document')).toHaveLength(21)
+  })
 })
