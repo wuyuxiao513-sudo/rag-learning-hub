@@ -2,6 +2,7 @@ package io.github.wuyuxiao513.raglearninghub.document;
 
 import io.github.wuyuxiao513.raglearninghub.document.importing.DocumentImportService;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class KnowledgeDocumentService {
                 title.strip(), content.strip(), normalizeTags(tags), normalizedFilename));
     }
 
-    public List<KnowledgeDocument> search(String query, String tag, String sort) {
+    public Page<KnowledgeDocument> search(String query, String tag, String sort, int page) {
         Specification<KnowledgeDocument> specification = (root, criteriaQuery, builder) -> builder.conjunction();
 
         if (query != null && !query.isBlank()) {
@@ -49,11 +50,11 @@ public class KnowledgeDocumentService {
         }
 
         Sort ordering = switch (sort == null ? "newest" : sort) {
-            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
-            case "title" -> Sort.by(Sort.Direction.ASC, "title");
-            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt", "id");
+            case "title" -> Sort.by(Sort.Direction.ASC, "title", "id");
+            default -> Sort.by(Sort.Direction.DESC, "createdAt", "id");
         };
-        return repository.findAll(specification, PageRequest.of(0, 20, ordering)).getContent();
+        return repository.findAll(specification, PageRequest.of(page, 20, ordering));
     }
 
     public KnowledgeDocument get(Long id) {

@@ -8,6 +8,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,7 +28,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/documents")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173", exposedHeaders = "X-Has-More")
 public class DocumentController {
 
     private final KnowledgeDocumentService service;
@@ -50,12 +52,19 @@ public class DocumentController {
     }
 
     @GetMapping
-    public List<DocumentResponse> search(
+    public ResponseEntity<List<DocumentResponse>> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String tag,
-            @RequestParam(defaultValue = "newest") String sort
+            @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(defaultValue = "0") int page
     ) {
-        return service.search(q, tag, sort).stream().map(DocumentResponse::from).toList();
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be non-negative");
+        }
+        var results = service.search(q, tag, sort, page);
+        return ResponseEntity.ok()
+                .header("X-Has-More", Boolean.toString(results.hasNext()))
+                .body(results.getContent().stream().map(DocumentResponse::from).toList());
     }
 
     @GetMapping("/{id}")

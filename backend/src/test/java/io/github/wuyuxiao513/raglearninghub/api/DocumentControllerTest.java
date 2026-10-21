@@ -1,6 +1,7 @@
 package io.github.wuyuxiao513.raglearninghub.api;
 
 import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocumentRepository;
+import io.github.wuyuxiao513.raglearninghub.document.KnowledgeDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.hasSize;
+
+import java.util.List;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,6 +37,66 @@ class DocumentControllerTest {
     @BeforeEach
     void cleanDatabase() {
         repository.deleteAll();
+    }
+
+    @Test
+    void returnsLaterPagesWithoutChangingTheArrayBody() throws Exception {
+        for (int index = 0; index < 21; index++) {
+            repository.save(new KnowledgeDocument("Note " + index, "body", List.of(), null));
+        }
+
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(20)))
+                .andExpect(header().string("X-Has-More", "true"));
+        mockMvc.perform(get("/api/documents").queryParam("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(header().string("X-Has-More", "false"));
+    }
+
+    @Test
+    void fullFinalPageDoesNotAdvertiseAnotherPage() throws Exception {
+        for (int index = 0; index < 20; index++) {
+            repository.save(new KnowledgeDocument("Note " + index, "body", List.of(), null));
+        }
+
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(20)))
+                .andExpect(header().string("X-Has-More", "false"));
+    }
+
+    @Test
+    void pagesFilteredEqualTitlesById() throws Exception {
+        long firstId = 0;
+        long lastId = 0;
+        for (int index = 0; index < 21; index++) {
+            long id = repository.save(new KnowledgeDocument("Same", "needle", List.of("RAG"), null)).getId();
+            if (index == 0) firstId = id;
+            lastId = id;
+        }
+        repository.save(new KnowledgeDocument("Same", "needle", List.of("other"), null));
+
+        mockMvc.perform(get("/api/documents").queryParam("q", "needle")
+                        .queryParam("tag", "RAG").queryParam("sort", "title"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(20)))
+                .andExpect(jsonPath("$[0].id").value(firstId))
+                .andExpect(header().string("X-Has-More", "true"));
+        mockMvc.perform(get("/api/documents").queryParam("q", "needle")
+                        .queryParam("tag", "RAG").queryParam("sort", "title")
+                        .queryParam("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(lastId))
+                .andExpect(header().string("X-Has-More", "false"));
+    }
+
+    @Test
+    void rejectsNegativePage() throws Exception {
+        mockMvc.perform(get("/api/documents").queryParam("page", "-1"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
