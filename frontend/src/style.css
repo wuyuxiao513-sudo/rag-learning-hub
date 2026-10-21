@@ -81,6 +81,7 @@ button:disabled { cursor: wait; opacity: .6; }
 .search-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .search-filters label { margin: 0; }
 .result-summary { margin: 14px 0 0; color: #28744a; font-size: .84rem; font-weight: 800; }
+.load-more { display: block; margin: 20px auto 0; }
 .message, .empty { color: #69756e; }
 .document { margin-top: 16px; padding: 20px; border-left: 4px solid #69b886; border-radius: 4px 15px 15px 4px; background: #f6f8f4; }
 .document-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }

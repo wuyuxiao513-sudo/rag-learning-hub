@@ -663,4 +663,119 @@ describe('App', () => {
     expect(wrapper.find('.document script').exists()).toBe(false)
     expect(wrapper.find('.document img').exists()).toBe(false)
   })
+
+  it('appends a later page and hides Load More after the last page', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: [],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    const lastDocument = { ...firstPage[0], id: 21, title: 'Note 21' }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'true' }, json: async () => firstPage })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [lastDocument] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.findAll('.document')).toHaveLength(20)
+    expect(wrapper.get('.load-more').text()).toContain('加载更多')
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/documents?page=1')
+    expect(wrapper.findAll('.document')).toHaveLength(21)
+    expect(wrapper.find('.load-more').exists()).toBe(false)
+  })
+
+  it('does not show Load More for an exactly full last page', async () => {
+    const documents = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: [],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, headers: { get: () => 'false' }, json: async () => documents,
+    }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.findAll('.document')).toHaveLength(20)
+    expect(wrapper.find('.load-more').exists()).toBe(false)
+  })
+
+  it('uses committed filters for later pages and resets on a new search', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `RAG ${index + 1}`, content: 'body', tags: ['RAG'],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [] })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'true' }, json: async () => firstPage })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [{ ...firstPage[0], id: 21 }] })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('rag')
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('changed')
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?q=rag&page=1')
+    expect(wrapper.findAll('.document')).toHaveLength(21)
+
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/documents?q=changed')
+    expect(wrapper.findAll('.document')).toHaveLength(0)
+  })
+
+  it('keeps current results and permits retry when loading more fails', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: [],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'true' }, json: async () => firstPage })
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [{ ...firstPage[0], id: 21 }] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.document')).toHaveLength(20)
+    expect(wrapper.find('.load-more').exists()).toBe(true)
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?page=1')
+    expect(wrapper.findAll('.document')).toHaveLength(21)
+  })
+
+  it('ignores a stale later page after a tag search starts', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: ['RAG'],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    let resolveLaterPage!: (value: object) => void
+    const laterPage = new Promise<object>((resolve) => { resolveLaterPage = resolve })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'true' }, json: async () => firstPage })
+      .mockReturnValueOnce(laterPage)
+      .mockResolvedValueOnce({ ok: true, headers: { get: () => 'false' }, json: async () => [firstPage[0]] })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('.load-more').trigger('click')
+    await wrapper.get('.tag-pill').trigger('click')
+    await flushPromises()
+    resolveLaterPage({ ok: true, headers: { get: () => 'false' }, json: async () => [{ ...firstPage[0], id: 21 }] })
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?tag=RAG')
+    expect(wrapper.findAll('.document')).toHaveLength(1)
+  })
 })

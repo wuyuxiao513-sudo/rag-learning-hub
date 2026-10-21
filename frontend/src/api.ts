@@ -32,15 +32,20 @@ export async function searchDocuments(
   query: string,
   tag = '',
   sort = 'newest',
-): Promise<KnowledgeDocument[]> {
+  page = 0,
+): Promise<{ documents: KnowledgeDocument[]; hasMore: boolean }> {
   const params = new URLSearchParams()
   if (query.trim()) params.set('q', query.trim())
   if (tag.trim()) params.set('tag', tag.trim())
   if (sort !== 'newest') params.set('sort', sort)
+  if (page > 0) params.set('page', String(page))
 
   const response = await fetch(`/api/documents?${params}`)
   if (!response.ok) throw new Error('检索失败，请确认后端已经启动。')
-  return response.json()
+  return {
+    documents: await response.json() as KnowledgeDocument[],
+    hasMore: response.headers?.get('X-Has-More') === 'true',
+  }
 }
 
 export async function createDocument(

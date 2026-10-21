@@ -26,6 +26,10 @@ const chunkOverlap = ref(50)
 const fileInput = ref<HTMLInputElement | null>(null)
 let previewRequestId = 0
 const documents = ref<KnowledgeDocument[]>([])
+const currentPage = ref(0)
+const hasMore = ref(false)
+const loadingMore = ref(false)
+let searchRequestId = 0
 const availableTags = ref<string[]>([])
 const message = ref('')
 const loading = ref(false)
@@ -118,6 +122,7 @@ async function previewFile(event: Event) {
 }
 
 async function search(): Promise<boolean> {
+  const requestId = ++searchRequestId
   const requestedQuery = query.value.trim()
   const requestedTag = selectedTag.value
   const requestedSort = sortOrder.value
@@ -125,17 +130,45 @@ async function search(): Promise<boolean> {
   message.value = ''
   try {
     const results = await searchDocuments(requestedQuery, requestedTag, requestedSort)
-    documents.value = results
-    rememberTags(results)
+    if (requestId !== searchRequestId) return false
+    documents.value = results.documents
+    rememberTags(results.documents)
+    currentPage.value = 0
+    hasMore.value = results.hasMore
+    loadingMore.value = false
     activeQuery.value = requestedQuery
     activeTag.value = requestedTag
     activeSort.value = requestedSort
     return true
   } catch (error) {
+    if (requestId !== searchRequestId) return false
     message.value = error instanceof Error ? error.message : '发生未知错误'
     return false
   } finally {
-    loading.value = false
+    if (requestId === searchRequestId) loading.value = false
+  }
+}
+
+async function loadMore() {
+  if (loading.value || loadingMore.value || !hasMore.value) return
+  const requestId = searchRequestId
+  const nextPage = currentPage.value + 1
+  loadingMore.value = true
+  message.value = ''
+  try {
+    const results = await searchDocuments(activeQuery.value, activeTag.value, activeSort.value, nextPage)
+    if (requestId !== searchRequestId) return
+    const seen = new Set(documents.value.map((document) => document.id))
+    const newDocuments = results.documents.filter((document) => !seen.has(document.id))
+    documents.value = [...documents.value, ...newDocuments]
+    rememberTags(results.documents)
+    currentPage.value = nextPage
+    hasMore.value = results.hasMore
+  } catch (error) {
+    if (requestId !== searchRequestId) return
+    message.value = error instanceof Error ? error.message : '加载更多失败，请重试。'
+  } finally {
+    if (requestId === searchRequestId) loadingMore.value = false
   }
 }
 
@@ -341,6 +374,8 @@ onMounted(search)
       <p class="result-summary" aria-live="polite">
         {{ loading
           ? '正在加载文档…'
+          : hasMore
+            ? `已加载 ${documents.length} 篇文档`
           : activeQuery || activeTag
             ? `找到 ${documents.length} 条结果`
             : `知识库共 ${documents.length} 篇文档`
@@ -436,6 +471,15 @@ onMounted(search)
           </p>
         </template>
       </article>
+      <button
+        v-if="hasMore && !loading"
+        class="load-more secondary-button"
+        type="button"
+        :disabled="loadingMore"
+        @click="loadMore"
+      >
+        {{ loadingMore ? '加载中…' : '加载更多' }}
+      </button>
     </section>
   </main>
 </template>
