@@ -73,6 +73,14 @@ class DocumentControllerTest {
     }
 
     @Test
+    void emptySearchReportsZeroTotal() throws Exception {
+        mockMvc.perform(get("/api/documents"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)))
+                .andExpect(header().string("X-Total-Count", "0"));
+    }
+
+    @Test
     void pagesFilteredEqualTitlesById() throws Exception {
         long firstId = 0;
         long lastId = 0;

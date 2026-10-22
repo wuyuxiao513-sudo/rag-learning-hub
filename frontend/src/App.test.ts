@@ -678,6 +678,7 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
     expect(wrapper.findAll('.document')).toHaveLength(20)
+    expect(wrapper.get('.result-summary').text()).toBe('已加载 20 篇文档')
     expect(wrapper.get('.load-more').text()).toContain('加载更多')
     await wrapper.get('.load-more').trigger('click')
     await flushPromises()
@@ -700,7 +701,7 @@ describe('App', () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(response(firstPage, true, 21))
       .mockResolvedValueOnce(response([{ ...firstPage[0], id: 21 }], false, 21))
-      .mockResolvedValueOnce(response([firstPage[0]], false, 1)))
+      .mockResolvedValueOnce(response(firstPage, true, 25)))
 
     const wrapper = mount(App)
     await flushPromises()
@@ -710,10 +711,10 @@ describe('App', () => {
     await flushPromises()
     expect(wrapper.get('.result-summary').text()).toBe('知识库共 21 篇文档')
 
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('Note 1')
+    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('Note')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
-    expect(wrapper.get('.result-summary').text()).toBe('找到 1 条结果')
+    expect(wrapper.get('.result-summary').text()).toBe('已加载 20 / 共 25 篇文档')
   })
 
   it('does not show Load More for an exactly full last page', async () => {
