@@ -28,6 +28,7 @@ let previewRequestId = 0
 const documents = ref<KnowledgeDocument[]>([])
 const currentPage = ref(0)
 const hasMore = ref(false)
+const totalCount = ref<number | null>(null)
 const loadingMore = ref(false)
 let searchRequestId = 0
 const availableTags = ref<string[]>([])
@@ -136,6 +137,7 @@ async function search(): Promise<boolean> {
     rememberTags(results.documents)
     currentPage.value = 0
     hasMore.value = results.hasMore
+    totalCount.value = results.totalCount
     loadingMore.value = false
     activeQuery.value = requestedQuery
     activeTag.value = requestedTag
@@ -165,6 +167,7 @@ async function loadMore() {
     rememberTags(results.documents)
     currentPage.value = nextPage
     hasMore.value = results.hasMore
+    totalCount.value = results.totalCount
   } catch (error) {
     if (requestId !== searchRequestId) return
     message.value = error instanceof Error ? error.message : '加载更多失败，请重试。'
@@ -376,7 +379,9 @@ onMounted(search)
         {{ loading
           ? '正在加载文档…'
           : hasMore
-            ? `已加载 ${documents.length} 篇文档`
+            ? totalCount !== null
+              ? `已加载 ${documents.length} / 共 ${totalCount} 篇文档`
+              : `已加载 ${documents.length} 篇文档`
           : activeQuery || activeTag
             ? `找到 ${documents.length} 条结果`
             : `知识库共 ${documents.length} 篇文档`

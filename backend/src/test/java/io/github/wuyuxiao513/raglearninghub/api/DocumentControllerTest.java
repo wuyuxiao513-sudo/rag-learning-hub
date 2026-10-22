@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.containsString;
 
 import java.util.List;
 
@@ -45,14 +46,17 @@ class DocumentControllerTest {
             repository.save(new KnowledgeDocument("Note " + index, "body", List.of(), null));
         }
 
-        mockMvc.perform(get("/api/documents"))
+        mockMvc.perform(get("/api/documents").header("Origin", "http://localhost:5173"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(20)))
-                .andExpect(header().string("X-Has-More", "true"));
+                .andExpect(header().string("X-Has-More", "true"))
+                .andExpect(header().string("X-Total-Count", "21"))
+                .andExpect(header().string("Access-Control-Expose-Headers", containsString("X-Total-Count")));
         mockMvc.perform(get("/api/documents").queryParam("page", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(header().string("X-Has-More", "false"));
+                .andExpect(header().string("X-Has-More", "false"))
+                .andExpect(header().string("X-Total-Count", "21"));
     }
 
     @Test
@@ -64,7 +68,8 @@ class DocumentControllerTest {
         mockMvc.perform(get("/api/documents"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(20)))
-                .andExpect(header().string("X-Has-More", "false"));
+                .andExpect(header().string("X-Has-More", "false"))
+                .andExpect(header().string("X-Total-Count", "20"));
     }
 
     @Test
@@ -83,14 +88,16 @@ class DocumentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(20)))
                 .andExpect(jsonPath("$[0].id").value(firstId))
-                .andExpect(header().string("X-Has-More", "true"));
+                .andExpect(header().string("X-Has-More", "true"))
+                .andExpect(header().string("X-Total-Count", "21"));
         mockMvc.perform(get("/api/documents").queryParam("q", "needle")
                         .queryParam("tag", "RAG").queryParam("sort", "title")
                         .queryParam("page", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id").value(lastId))
-                .andExpect(header().string("X-Has-More", "false"));
+                .andExpect(header().string("X-Has-More", "false"))
+                .andExpect(header().string("X-Total-Count", "21"));
     }
 
     @Test

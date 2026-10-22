@@ -28,7 +28,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/documents")
-@CrossOrigin(origins = "http://localhost:5173", exposedHeaders = "X-Has-More")
+@CrossOrigin(origins = "http://localhost:5173", exposedHeaders = {"X-Has-More", "X-Total-Count"})
 public class DocumentController {
 
     private final KnowledgeDocumentService service;
@@ -64,6 +64,7 @@ public class DocumentController {
         var results = service.search(q, tag, sort, page);
         return ResponseEntity.ok()
                 .header("X-Has-More", Boolean.toString(results.hasNext()))
+                .header("X-Total-Count", Long.toString(results.getTotalElements()))
                 .body(results.getContent().stream().map(DocumentResponse::from).toList());
     }
 

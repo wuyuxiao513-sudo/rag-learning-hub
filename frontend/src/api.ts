@@ -33,7 +33,7 @@ export async function searchDocuments(
   tag = '',
   sort = 'newest',
   page = 0,
-): Promise<{ documents: KnowledgeDocument[]; hasMore: boolean }> {
+): Promise<{ documents: KnowledgeDocument[]; hasMore: boolean; totalCount: number | null }> {
   const params = new URLSearchParams()
   if (query.trim()) params.set('q', query.trim())
   if (tag.trim()) params.set('tag', tag.trim())
@@ -42,9 +42,12 @@ export async function searchDocuments(
 
   const response = await fetch(`/api/documents?${params}`)
   if (!response.ok) throw new Error('检索失败，请确认后端已经启动。')
+  const totalHeader = response.headers?.get('X-Total-Count')
+  const totalCount = totalHeader && /^\d+$/.test(totalHeader) ? Number(totalHeader) : null
   return {
     documents: await response.json() as KnowledgeDocument[],
     hasMore: response.headers?.get('X-Has-More') === 'true',
+    totalCount: totalCount !== null && Number.isSafeInteger(totalCount) ? totalCount : null,
   }
 }
 

@@ -687,6 +687,35 @@ describe('App', () => {
     expect(wrapper.find('.load-more').exists()).toBe(false)
   })
 
+  it('shows the total for paged results and resets it when filters change', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: [],
+      createdAt: '2026-10-21T00:00:00Z', sourceFilename: null,
+    }))
+    const response = (documents: typeof firstPage, hasMore: boolean, total: number) => ({
+      ok: true,
+      headers: { get: (name: string) => name === 'X-Has-More' ? String(hasMore) : String(total) },
+      json: async () => documents,
+    })
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(response(firstPage, true, 21))
+      .mockResolvedValueOnce(response([{ ...firstPage[0], id: 21 }], false, 21))
+      .mockResolvedValueOnce(response([firstPage[0]], false, 1)))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    expect(wrapper.get('.result-summary').text()).toBe('已加载 20 / 共 21 篇文档')
+
+    await wrapper.get('.load-more').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.result-summary').text()).toBe('知识库共 21 篇文档')
+
+    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('Note 1')
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.result-summary').text()).toBe('找到 1 条结果')
+  })
+
   it('does not show Load More for an exactly full last page', async () => {
     const documents = Array.from({ length: 20 }, (_, index) => ({
       id: index + 1, title: `Note ${index + 1}`, content: 'body', tags: [],
