@@ -81,6 +81,34 @@ class DocumentControllerTest {
     }
 
     @Test
+    void searchesPercentAndUnderscoreAsLiteralCharacters() throws Exception {
+        repository.save(new KnowledgeDocument("100% ready", "literal percent", List.of(), null));
+        repository.save(new KnowledgeDocument("100 days ready", "plain text", List.of(), null));
+        repository.save(new KnowledgeDocument("a_b", "literal underscore", List.of(), null));
+        repository.save(new KnowledgeDocument("acb", "plain text", List.of(), null));
+
+        mockMvc.perform(get("/api/documents").queryParam("q", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("100% ready")))
+                .andExpect(header().string("X-Total-Count", "1"));
+        mockMvc.perform(get("/api/documents").queryParam("q", "_"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("a_b")))
+                .andExpect(header().string("X-Total-Count", "1"));
+    }
+
+    @Test
+    void searchesBackslashAsALiteralCharacter() throws Exception {
+        repository.save(new KnowledgeDocument("C:\\notes", "windows path", List.of(), null));
+        repository.save(new KnowledgeDocument("C:notes", "plain path", List.of(), null));
+
+        mockMvc.perform(get("/api/documents").queryParam("q", "\\"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("C:\\notes")))
+                .andExpect(header().string("X-Total-Count", "1"));
+    }
+
+    @Test
     void pagesFilteredEqualTitlesById() throws Exception {
         long firstId = 0;
         long lastId = 0;

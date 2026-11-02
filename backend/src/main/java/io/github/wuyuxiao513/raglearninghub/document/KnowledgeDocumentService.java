@@ -34,10 +34,14 @@ public class KnowledgeDocumentService {
         Specification<KnowledgeDocument> specification = (root, criteriaQuery, builder) -> builder.conjunction();
 
         if (query != null && !query.isBlank()) {
-            String pattern = "%" + query.strip().toLowerCase(Locale.ROOT) + "%";
+            String escapedQuery = query.strip().toLowerCase(Locale.ROOT)
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
+            String pattern = "%" + escapedQuery + "%";
             specification = specification.and((root, criteriaQuery, builder) -> builder.or(
-                    builder.like(builder.lower(root.get("title")), pattern),
-                    builder.like(builder.lower(root.get("content")), pattern)
+                    builder.like(builder.lower(root.get("title")), pattern, '\\'),
+                    builder.like(builder.lower(root.get("content")), pattern, '\\')
             ));
         }
 
