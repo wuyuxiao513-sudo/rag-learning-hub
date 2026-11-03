@@ -344,7 +344,7 @@ onMounted(search)
       </div>
       <form class="search" @submit.prevent="search">
         <div class="search-primary">
-          <input v-model="query" placeholder="输入标题或正文关键词" />
+          <input v-model="query" placeholder="输入标题、正文或文件名关键词" />
           <button :disabled="loading">{{ loading ? '检索中' : '搜索' }}</button>
           <button
             v-if="hasActiveSearch"
@@ -431,7 +431,9 @@ onMounted(search)
             <div>
               <small>#{{ document.id }} · {{ new Date(document.createdAt).toLocaleString() }}</small>
               <small v-if="document.sourceFilename" class="source-file">
-                来源：{{ document.sourceFilename }}
+                来源：<template v-for="(part, index) in highlightedParts(document.sourceFilename)" :key="index">
+                  <mark v-if="part.match">{{ part.text }}</mark><template v-else>{{ part.text }}</template>
+                </template>
               </small>
               <h3>
                 <template v-for="(part, index) in highlightedParts(document.title)" :key="index">

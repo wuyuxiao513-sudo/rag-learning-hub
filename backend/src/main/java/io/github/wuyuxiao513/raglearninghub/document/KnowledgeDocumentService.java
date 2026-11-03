@@ -41,7 +41,8 @@ public class KnowledgeDocumentService {
             String pattern = "%" + escapedQuery + "%";
             specification = specification.and((root, criteriaQuery, builder) -> builder.or(
                     builder.like(builder.lower(root.get("title")), pattern, '\\'),
-                    builder.like(builder.lower(root.get("content")), pattern, '\\')
+                    builder.like(builder.lower(root.get("content")), pattern, '\\'),
+                    builder.like(builder.lower(root.get("sourceFilename")), pattern, '\\')
             ));
         }
 

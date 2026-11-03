@@ -24,7 +24,7 @@ describe('App', () => {
     expect(wrapper.find('button[aria-label="删除检索笔记"]').exists()).toBe(true)
     expect(wrapper.get('.result-summary').text()).toBe('知识库共 1 篇文档')
 
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('检索')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('检索')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
 
@@ -171,7 +171,7 @@ describe('App', () => {
 
     const wrapper = mount(App)
     await flushPromises()
-    const searchInput = wrapper.get('input[placeholder="输入标题或正文关键词"]')
+    const searchInput = wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]')
     await searchInput.setValue('检索')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
@@ -232,7 +232,7 @@ describe('App', () => {
 
     const wrapper = mount(App)
     await flushPromises()
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('检索')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('检索')
     await wrapper.get('select[aria-label="按标签筛选"]').setValue('RAG')
     await wrapper.get('select[aria-label="排序方式"]').setValue('title')
     await wrapper.get('form.search').trigger('submit')
@@ -617,6 +617,27 @@ describe('App', () => {
     click.mockRestore()
   })
 
+  it('highlights a matching source filename and clears its highlight', async () => {
+    const document = {
+      id: 42, title: 'Note', content: 'body', tags: [],
+      createdAt: '2026-10-19T00:00:00Z', sourceFilename: 'Study_Guide.pdf',
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [document] }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('form.search input').setValue('guide')
+    await wrapper.get('form.search').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('.source-file').text()).toContain('Study_Guide.pdf')
+    expect(wrapper.findAll('.source-file mark').map((item) => item.text())).toEqual(['Guide'])
+
+    await wrapper.get('.clear-search').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('.source-file mark')).toHaveLength(0)
+  })
+
   it('highlights only the submitted keyword and clears highlights with the search', async () => {
     const document = {
       id: 31, title: 'RAG 入门', content: '学习 rag 与 RaG。', tags: [],
@@ -626,7 +647,7 @@ describe('App', () => {
 
     const wrapper = mount(App)
     await flushPromises()
-    const searchInput = wrapper.get('input[placeholder="输入标题或正文关键词"]')
+    const searchInput = wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]')
     await searchInput.setValue('rag')
     expect(wrapper.findAll('.document mark')).toHaveLength(0)
 
@@ -653,7 +674,7 @@ describe('App', () => {
 
     const wrapper = mount(App)
     await flushPromises()
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('C++')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('C++')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
 
@@ -711,7 +732,7 @@ describe('App', () => {
     await flushPromises()
     expect(wrapper.get('.result-summary').text()).toBe('知识库共 21 篇文档')
 
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('Note')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('Note')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
     expect(wrapper.get('.result-summary').text()).toBe('已加载 20 / 共 25 篇文档')
@@ -746,10 +767,10 @@ describe('App', () => {
 
     const wrapper = mount(App)
     await flushPromises()
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('rag')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('rag')
     await wrapper.get('form.search').trigger('submit')
     await flushPromises()
-    await wrapper.get('input[placeholder="输入标题或正文关键词"]').setValue('changed')
+    await wrapper.get('input[placeholder="输入标题、正文或文件名关键词"]').setValue('changed')
     await wrapper.get('.load-more').trigger('click')
     await flushPromises()
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/documents?q=rag&page=1')

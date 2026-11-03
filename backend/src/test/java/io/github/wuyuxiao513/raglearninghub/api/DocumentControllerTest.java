@@ -109,6 +109,18 @@ class DocumentControllerTest {
     }
 
     @Test
+    void searchesSourceFilenameCaseInsensitivelyWithLiteralWildcards() throws Exception {
+        repository.save(new KnowledgeDocument("First", "body", List.of(), "study_guide.pdf"));
+        repository.save(new KnowledgeDocument("Second", "body", List.of(), "studyXguide.pdf"));
+        repository.save(new KnowledgeDocument("Third", "body", List.of(), null));
+
+        mockMvc.perform(get("/api/documents").queryParam("q", "_GUIDE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].title", contains("First")))
+                .andExpect(header().string("X-Total-Count", "1"));
+    }
+
+    @Test
     void pagesFilteredEqualTitlesById() throws Exception {
         long firstId = 0;
         long lastId = 0;
