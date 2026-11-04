@@ -82,6 +82,20 @@ function downloadChunks() {
   URL.revokeObjectURL(url)
 }
 
+function downloadMarkdown(item: KnowledgeDocument) {
+  const safeTitle = item.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/g, '')
+  const filename = `${safeTitle || `document-${item.id}`}.md`
+  const tags = item.tags?.length ? `标签：${item.tags.join(', ')}\n\n` : ''
+  const markdown = `# ${item.title.replace(/[\r\n]+/g, ' ')}\n\n${tags}${item.content}\n`
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function parseTags(value: string): string[] {
   const tags = value
     .split(/[,，]/)
@@ -453,6 +467,12 @@ onMounted(search)
               </div>
             </div>
             <div class="document-actions">
+              <button
+                class="edit-button secondary-button"
+                type="button"
+                :aria-label="`下载${document.title}为 Markdown`"
+                @click="downloadMarkdown(document)"
+              >下载 MD</button>
               <button
                 class="edit-button secondary-button"
                 type="button"

@@ -7,6 +7,36 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
+  it('downloads a saved document as UTF-8 Markdown with a safe filename', async () => {
+    const saved = {
+      id: 7, title: 'RAG/入门:笔记', content: '第一段\n\n第二段',
+      tags: ['RAG', '学习'], sourceFilename: 'notes.pdf', createdAt: '2026-11-04T00:00:00Z',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [saved] })
+    vi.stubGlobal('fetch', fetchMock)
+    const blobs: Blob[] = []
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn((blob: Blob) => { blobs.push(blob); return 'blob:markdown-test' }),
+      revokeObjectURL: vi.fn(),
+    })
+    const downloads: string[] = []
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      downloads.push(this.download)
+    })
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('button[aria-label="下载RAG/入门:笔记为 Markdown"]').trigger('click')
+
+    expect(downloads).toEqual(['RAG_入门_笔记.md'])
+    expect(blobs).toHaveLength(1)
+    expect(blobs[0].type).toBe('text/markdown;charset=utf-8')
+    expect(await blobs[0].text()).toBe('# RAG/入门:笔记\n\n标签：RAG, 学习\n\n第一段\n\n第二段\n')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:markdown-test')
+    click.mockRestore()
+  })
+
   it('shows a delete action for each loaded document', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
