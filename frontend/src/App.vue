@@ -96,6 +96,15 @@ function downloadMarkdown(item: KnowledgeDocument) {
   URL.revokeObjectURL(url)
 }
 
+async function copyContent(item: KnowledgeDocument) {
+  try {
+    await navigator.clipboard.writeText(item.content)
+    message.value = '正文已复制。'
+  } catch {
+    message.value = '复制失败，请检查浏览器剪贴板权限。'
+  }
+}
+
 function parseTags(value: string): string[] {
   const tags = value
     .split(/[,，]/)
@@ -467,6 +476,12 @@ onMounted(search)
               </div>
             </div>
             <div class="document-actions">
+              <button
+                class="edit-button secondary-button"
+                type="button"
+                :aria-label="`复制${document.title}的正文`"
+                @click="copyContent(document)"
+              >复制正文</button>
               <button
                 class="edit-button secondary-button"
                 type="button"

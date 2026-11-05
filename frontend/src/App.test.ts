@@ -7,6 +7,39 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
+  it('copies the full saved document body and reports success', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [{
+      id: 9, title: 'Note', content: 'first\nsecond', tags: [],
+      createdAt: '2026-11-05T00:00:00Z', sourceFilename: null,
+    }] }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('button[aria-label="复制Note的正文"]').trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledOnce()
+    expect(writeText).toHaveBeenCalledWith('first\nsecond')
+    expect(wrapper.get('.message').text()).toBe('正文已复制。')
+  })
+
+  it('shows a usable error when the browser blocks copying', async () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [{
+      id: 10, title: 'Private', content: 'body', tags: [],
+      createdAt: '2026-11-05T00:00:00Z', sourceFilename: null,
+    }] }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+    await wrapper.get('button[aria-label="复制Private的正文"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.message').text()).toBe('复制失败，请检查浏览器剪贴板权限。')
+  })
+
   it('downloads a saved document as UTF-8 Markdown with a safe filename', async () => {
     const saved = {
       id: 7, title: 'RAG/入门:笔记', content: '第一段\n\n第二段',
