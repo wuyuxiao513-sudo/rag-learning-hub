@@ -320,7 +320,8 @@ onMounted(search)
       </label>
       <label>
         正文
-        <textarea v-model="content" rows="7" placeholder="粘贴一段值得检索的技术笔记……" />
+        <textarea v-model="content" rows="7" maxlength="100000" placeholder="粘贴一段值得检索的技术笔记……" />
+        <small class="content-count">{{ content.length }} / 100000 字符</small>
       </label>
       <label>
         标签
@@ -426,7 +427,8 @@ onMounted(search)
           </label>
           <label>
             正文
-            <textarea v-model="editContent" rows="5" />
+            <textarea v-model="editContent" rows="5" maxlength="100000" />
+            <small class="content-count">{{ editContent.length }} / 100000 字符</small>
           </label>
           <label>
             标签

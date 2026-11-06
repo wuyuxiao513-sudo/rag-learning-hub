@@ -7,6 +7,24 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
+  it('shows live body length for drafting and editing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [{
+      id: 12, title: 'Note', content: 'saved body', tags: [],
+      createdAt: '2026-11-06T00:00:00Z', sourceFilename: null,
+    }] }))
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.get('.composer .content-count').text()).toBe('0 / 100000 字符')
+    await wrapper.get('.composer textarea').setValue('new\ntext')
+    expect(wrapper.get('.composer .content-count').text()).toBe('8 / 100000 字符')
+
+    await wrapper.get('button[aria-label="编辑Note"]').trigger('click')
+    expect(wrapper.get('.document-edit .content-count').text()).toBe('10 / 100000 字符')
+    await wrapper.get('.document-edit textarea').setValue('changed')
+    expect(wrapper.get('.document-edit .content-count').text()).toBe('7 / 100000 字符')
+  })
+
   it('copies the full saved document body and reports success', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
